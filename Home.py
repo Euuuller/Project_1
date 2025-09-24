@@ -20,7 +20,7 @@ st.write("Curry Company Growth Dashboard")
 st.markdown(
     """
     Growrh Dashboard foi construido para acompanhar o crescimento dos Entregadores e Restaurantes.
-    ### COmo utilizar esse Growth Dashboard?
+    ### Como utilizar esse Growth Dashboard?
     - A barra lateral esquerda contém os filtros para selecionar os dados que deseja visualizar.
         - Visão da Empresa:
             - VIsão Gerencial: Métricas Gerais de Comportamento.

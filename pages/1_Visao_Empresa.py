@@ -275,8 +275,8 @@ with tab3:
         # Legenda informativa
         st.markdown("""
         **Legenda do Mapa:**
-        - 🟢 Verde: Tráfego Baixo (Low)
-        - 🟠 Laranja: Tráfego Médio (Medium)  
+        - 🟢 Verde: Tráfego Muito Baixo (Very Low)
+        - 🟡 Amarelo: Tráfego Baixo (Low)
+        - 🟠 Laranja: Tráfego Médio (Medium)
         - 🔴 Vermelho: Tráfego Alto (High)
-        - 🔴 Vermelho Escuro: Congestionamento (Jam)
         """)
