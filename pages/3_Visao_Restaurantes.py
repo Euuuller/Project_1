@@ -8,17 +8,14 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
-import folium
 import numpy as np
-import plotly.graph_objects as go
-from streamlit_folium import folium_static
 #----------------------------------------------------------------------------------#
 
 #----------------------------------------------------------------------------------#
 #Funções do StreamLit
 #----------------------------------------------------------------------------------#
 def distance(df1, fig):
-    if fig == False:
+    if not fig:
         col2 = ["Delivery_location_latitude", 'Delivery_location_longitude', 
                 'Restaurant_latitude', 'Restaurant_longitude']
         # Calculando a distância
@@ -122,47 +119,49 @@ def clean_code(df1):
     Retorna:
         pandas.DataFrame: DataFrame limpo.
     """
-#----------------------------------------------------------------------------------#
+    # 1. Conversão a coluna Age de texto para número
+    linhas_selecionadas = (df1 ['Delivery_person_Age'] != 'NaN ')
+    df1 = df1.loc[linhas_selecionadas, :].copy()
+    df1['Delivery_person_Age'] = df1['Delivery_person_Age']. astype( int )
+
+    linhas_selecionadas = (df1 ['Road_traffic_density'] != 'NaN ')
+    df1 = df1.loc[linhas_selecionadas, :].copy()
+
+    linhas_selecionadas = (df1 ['City'] != 'NaN ')
+    df1 = df1.loc[linhas_selecionadas, :].copy()
+
+    linhas_selecionadas = (df1 ['Festival'] != 'NaN ')
+    df1 = df1.loc[linhas_selecionadas, :].copy()
+
+    # 2. Conversão a coluna de Ratings de texto para número decimal (float)
+    df1['Delivery_person_Ratings'] = df1['Delivery_person_Ratings']. astype( float )
+
+    # 3. Conversão da coluna order_date de texto para data
+    df1['Order_Date'] = pd.to_datetime( df1['Order_Date'], format='%d-%m-%Y' )
+
+    # 4. Conversão de Multiple_deliveries para Interiro
+    linhas_selecionadas = (df1 ['multiple_deliveries'] != 'NaN ')
+    df1 = df1.loc[linhas_selecionadas, :].copy()
+    df1['multiple_deliveries'] = df1['multiple_deliveries'].astype( int )
+
+    # 5. Removendo os espaços dentro de strings/texto/objects
+    df1.loc[:, 'ID'] = df1.loc[:, 'ID'].str.strip()
+    df1.loc[:, 'Road_traffic_density'] = df1.loc[:, 'Road_traffic_density'].str.strip()
+    df1.loc[:, 'Type_of_order'] = df1.loc[:, 'Type_of_order'].str.strip()
+    df1.loc[:, 'Type_of_vehicle'] = df1.loc[:, 'Type_of_vehicle'].str.strip()
+    df1.loc[:, 'City'] = df1.loc[:, 'City'].str.strip()
+    df1.loc[:, 'Festival'] = df1.loc[:, 'Festival'].str.strip()
+
+    # 6. Limpeza sobre a coluna Time_taken(min)
+    df1['Time_taken(min)'] = df1['Time_taken(min)'].apply( lambda x: x.split( '(min) ' )[1])
+    df1['Time_taken(min)'] = df1['Time_taken(min)'].astype( int )
+    
+    return df1
 
 #----------------------------------------------------------------------------------#
-# 1. Conversão a coluna Age de texto para número
-linhas_selecionadas = (df1 ['Delivery_person_Age'] != 'NaN ')
-df1 = df1.loc[linhas_selecionadas, :].copy()
-df1['Delivery_person_Age'] = df1['Delivery_person_Age']. astype( int )
-df1.shape
-
-linhas_selecionadas = (df1 ['Road_traffic_density'] != 'NaN ')
-df1 = df1.loc[linhas_selecionadas, :].copy()
-
-linhas_selecionadas = (df1 ['City'] != 'NaN ')
-df1 = df1.loc[linhas_selecionadas, :].copy()
-
-linhas_selecionadas = (df1 ['Festival'] != 'NaN ')
-df1 = df1.loc[linhas_selecionadas, :].copy()
-
-
-# 2. Conversão a coluna de Ratings de texto para número decimal (float)
-df1['Delivery_person_Ratings'] = df1['Delivery_person_Ratings']. astype( float )
-
-# 3. Conversão da coluna order_date de texto para data
-df1['Order_Date'] = pd.to_datetime( df1['Order_Date'], format='%d-%m-%Y' )
-
-# 4. Conversão de Multiple_deliveries para Interiro
-linhas_selecionadas = (df1 ['multiple_deliveries'] != 'NaN ')
-df1 = df1.loc[linhas_selecionadas, :].copy()
-df1['multiple_deliveries'] = df1['multiple_deliveries'].astype( int )
-
-# 5. Removendo os espaços dentro de strings/texto/objects
-df1.loc[:, 'ID'] = df1.loc[:, 'ID'].str.strip()
-df1.loc[:, 'Road_traffic_density'] = df1.loc[:, 'Road_traffic_density'].str.strip()
-df1.loc[:, 'Type_of_order'] = df1.loc[:, 'Type_of_order'].str.strip()
-df1.loc[:, 'Type_of_vehicle'] = df1.loc[:, 'Type_of_vehicle'].str.strip()
-df1.loc[:, 'City'] = df1.loc[:, 'City'].str.strip()
-df1.loc[:, 'Festival'] = df1.loc[:, 'Festival'].str.strip()
-
-# 6. Limpeza sobre a coluna Time_taken(min)
-df1['Time_taken(min)'] = df1['Time_taken(min)'].apply( lambda x: x.split( '(min) ' )[1])
-df1['Time_taken(min)'] = df1['Time_taken(min)'].astype( int )
+# Aplicar limpeza dos dados
+#----------------------------------------------------------------------------------#
+df1 = clean_code(df1)
 #----------------------------------------------------------------------------------#
 
 #----------------------------------------------------------------------------------#
@@ -239,11 +238,11 @@ with tab1:
 
         with col5:
             df_aux = avg_std_time_delivery(df1, 'No', 'avg_time')
-            col5.metric("Tempo Médio de Entrega c/ Festival", df_aux)
+            col5.metric("Tempo Médio de Entrega s/ Festival", df_aux)
                 
         with col6:
             df_aux = avg_std_time_delivery(df1, 'No', 'std_time')
-            col6.metric("Desvio Padrão Médio de Entrega c/ Festival", df_aux)
+            col6.metric("Desvio Padrão Médio de Entrega s/ Festival", df_aux)
 
     with st.container():
         st.markdown("""___""")
@@ -259,7 +258,7 @@ with tab1:
             df_aux = df1.loc [:, cols].groupby (['City','Type_of_order'] ).agg ({'Time_taken(min)': ['mean', 'std']})
             df_aux.columns = ['avg_time', 'std_time']                                                     
             df_aux = df_aux.reset_index()
-            df_aux
+            st.dataframe(df_aux)
 
     with st.container():
         col1, col2  = st.columns(2)

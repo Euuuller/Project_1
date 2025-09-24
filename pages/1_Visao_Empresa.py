@@ -1,12 +1,12 @@
 #----------------------------------------------------------------------------------#
 #Importação de Bibliotecas
 #----------------------------------------------------------------------------------#
-from haversine import haversine
+# Remove unused import
 from datetime import datetime
 from PIL import Image
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
+# Removed unused import plotly.graph_objects
 import streamlit as st
 import folium
 from streamlit_folium import folium_static
@@ -174,94 +174,109 @@ df1 = df1.loc[linhas_selecionadas, :]
 st.dataframe(df1)
 
 #----------------------------------------------------------------------------------#
-#Layout no Streamlit 
+# Layout no Streamlit 
 #----------------------------------------------------------------------------------#
 
+# Criação das abas principais
 tab1, tab2, tab3 = st.tabs(["Visão Gerencial", "Visão Tática", "Visão Geográfica"])
 
-with tab1: 
-    with st.container():
-        #Order Metric
-        fig = order_metric(df1)
-        st.markdown("# Order by Day")
-        st.plotly_chart(fig, use_container_width=True)
+# ==================================================================================
+# TAB 1: VISÃO GERENCIAL
+# ==================================================================================
+with tab1:
+    st.markdown("## 📊 Análise Gerencial de Pedidos")
     
+    # Seção 1: Pedidos por Dia
     with st.container():
-        col1, col2 = st.columns(2)
+        st.markdown("### 📈 Evolução Diária de Pedidos")
+        fig = order_metric(df1)
+        st.plotly_chart(fig, use_container_width=True)
+        st.markdown("---")  # Separador visual
+    
+    # Seção 2: Análise de Tráfego (Layout em colunas)
+    with st.container():
+        st.markdown("### 🚦 Análise de Condições de Tráfego")
+        
+        col1, col2 = st.columns(2, gap="large")
+        
         with col1:
-            #Order Metric
+            st.markdown("#### Distribuição por Tipo de Tráfego")
             fig = traffiic_order_share(df1)
-            st.header("Traffic Order Share")
             st.plotly_chart(fig, use_container_width=True)
         
         with col2:
-            #Order Metric
+            st.markdown("#### Tráfego por Cidade")
             fig = Traffic_Order_City(df1)
-            st.header("Traffic Order City")
             st.plotly_chart(fig, use_container_width=True)
 
-
+# ==================================================================================
+# TAB 2: VISÃO TÁTICA
+# ==================================================================================
 with tab2:
+    st.markdown("## 📅 Análise Tática Temporal")
+    
+    # Seção 1: Pedidos por Semana
     with st.container():
-        #Order Metric
+        st.markdown("### 📊 Pedidos por Semana")
         fig = Order_by_Week(df1)
-        st.markdown("# Order by Week")
         st.plotly_chart(fig, use_container_width=True)
+        st.markdown("---")  # Separador visual
 
+    # Seção 2: Participação Semanal
     with st.container():
-        #Order Metric
+        st.markdown("### 📈 Distribuição Semanal de Pedidos")
         fig = Order_Share_by_Week(df1)
-        st.markdown("# Order Share by Week")
         st.plotly_chart(fig, use_container_width=True)
 
-
+# ==================================================================================
+# TAB 3: VISÃO GEOGRÁFICA
+# ==================================================================================
 with tab3:
-    def Country_Map(df1):
-        # Usar df1 corretamente
+    st.markdown("## 🗺️ Análise Geográfica")
+    
+    with st.container():
+        st.markdown("### 📍 Localização das Entregas por Cidade e Tráfego")
+        
+        # Preparação dos dados para o mapa
         df_aux = (df1.loc[:, ['City','Road_traffic_density','Delivery_location_latitude', 'Delivery_location_longitude']]
                     .groupby(['City', 'Road_traffic_density'])
                     .median().reset_index())
 
-        # Corrigir filtros de NaN
+        # Filtros de dados válidos
         df_aux = df_aux[df_aux['City'].notna()]
         df_aux = df_aux[df_aux['Road_traffic_density'].notna()]
+        df_aux = df_aux.head(100)  # Limitar pontos para performance
 
-        # Limitar o número de pontos
-        df_aux = df_aux.head(50)
+        # Criação e configuração do mapa
+        map_center = [df_aux['Delivery_location_latitude'].mean(), 
+                     df_aux['Delivery_location_longitude'].mean()]
+        map = folium.Map(location=map_center, zoom_start=10)
 
-        # Criar o mapa uma única vez
-        map = folium.Map()
+        # Adição de marcadores com cores por tipo de tráfego
+        color_map = {
+            'Low': 'green',
+            'Medium': 'orange', 
+            'High': 'red',
+            'Jam': 'darkred'
+        }
 
-        # Adicionar marcadores
         for _, location_info in df_aux.iterrows():
+            color = color_map.get(location_info['Road_traffic_density'], 'blue')
             folium.Marker(
-                [location_info['Delivery_location_latitude'], location_info['Delivery_location_longitude']],
-                popup=f"{location_info['City']} - {location_info['Road_traffic_density']}"
+                [location_info['Delivery_location_latitude'], 
+                 location_info['Delivery_location_longitude']],
+                popup=f"🏙️ {location_info['City']}<br>🚦 {location_info['Road_traffic_density']}",
+                icon=folium.Icon(color=color, icon='info-sign')
             ).add_to(map)
 
-        # Exibir mapa
+        # Exibição do mapa
         folium_static(map, width=1024, height=600)
-    # Usar df1 corretamente
-    df_aux = (df1.loc[:, ['City','Road_traffic_density','Delivery_location_latitude', 'Delivery_location_longitude']]
-                .groupby(['City', 'Road_traffic_density'])
-                .median().reset_index())
-
-    # Corrigir filtros de NaN
-    df_aux = df_aux[df_aux['City'].notna()]
-    df_aux = df_aux[df_aux['Road_traffic_density'].notna()]
-
-    # Limitar o número de pontos
-    df_aux = df_aux.head(100)
-
-    # Criar o mapa uma única vez
-    map = folium.Map()
-
-    # Adicionar marcadores
-    for _, location_info in df_aux.iterrows():
-        folium.Marker(
-            [location_info['Delivery_location_latitude'], location_info['Delivery_location_longitude']],
-            popup=f"{location_info['City']} - {location_info['Road_traffic_density']}"
-        ).add_to(map)
-
-    # Exibir mapa
-    folium_static(map, width=1024, height=600)
+        
+        # Legenda informativa
+        st.markdown("""
+        **Legenda do Mapa:**
+        - 🟢 Verde: Tráfego Baixo (Low)
+        - 🟠 Laranja: Tráfego Médio (Medium)  
+        - 🔴 Vermelho: Tráfego Alto (High)
+        - 🔴 Vermelho Escuro: Congestionamento (Jam)
+        """)

@@ -1,15 +1,11 @@
 #----------------------------------------------------------------------------------#
 #Importação de Bibliotecas
 #----------------------------------------------------------------------------------#
-from haversine import haversine
 from datetime import datetime
 from PIL import Image
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
 import streamlit as st
-import folium
-from streamlit_folium import folium_static
+
 #----------------------------------------------------------------------------------#
 
 #----------------------------------------------------------------------------------#
@@ -22,7 +18,7 @@ def top_delivers(df1, top_asc):
 
     df_aux01 = df2.loc[df2['City']=='Metropolitian', :].head(10)
     df_aux02 = df2.loc[df2['City']=='Urban', :].head(10)
-    df_aux03 = df2.loc[df2['City']=='Semi-Urban	', :].head(10)
+    df_aux03 = df2.loc[df2['City']=='Semi-Urban', :].head(10)
     df3 = pd.concat([df_aux01, df_aux02, df_aux03]).reset_index(drop=True)
     
     return df3
@@ -54,47 +50,49 @@ def clean_code(df1):
     Retorna:
         pandas.DataFrame: DataFrame limpo.
     """
-#----------------------------------------------------------------------------------#
+    # 1. Conversão a coluna Age de texto para número
+    linhas_selecionadas = (df1 ['Delivery_person_Age'] != 'NaN ')
+    df1 = df1.loc[linhas_selecionadas, :].copy()
+    df1['Delivery_person_Age'] = df1['Delivery_person_Age']. astype( int )
+
+    linhas_selecionadas = (df1 ['Road_traffic_density'] != 'NaN ')
+    df1 = df1.loc[linhas_selecionadas, :].copy()
+
+    linhas_selecionadas = (df1 ['City'] != 'NaN ')
+    df1 = df1.loc[linhas_selecionadas, :].copy()
+
+    linhas_selecionadas = (df1 ['Festival'] != 'NaN ')
+    df1 = df1.loc[linhas_selecionadas, :].copy()
+
+    # 2. Conversão a coluna de Ratings de texto para número decimal (float)
+    df1['Delivery_person_Ratings'] = df1['Delivery_person_Ratings']. astype( float )
+
+    # 3. Conversão da coluna order_date de texto para data
+    df1['Order_Date'] = pd.to_datetime( df1['Order_Date'], format='%d-%m-%Y' )
+
+    # 4. Conversão de Multiple_deliveries para Interiro
+    linhas_selecionadas = (df1 ['multiple_deliveries'] != 'NaN ')
+    df1 = df1.loc[linhas_selecionadas, :].copy()
+    df1['multiple_deliveries'] = df1['multiple_deliveries'].astype( int )
+
+    # 5. Removendo os espaços dentro de strings/texto/objects
+    df1.loc[:, 'ID'] = df1.loc[:, 'ID'].str.strip()
+    df1.loc[:, 'Road_traffic_density'] = df1.loc[:, 'Road_traffic_density'].str.strip()
+    df1.loc[:, 'Type_of_order'] = df1.loc[:, 'Type_of_order'].str.strip()
+    df1.loc[:, 'Type_of_vehicle'] = df1.loc[:, 'Type_of_vehicle'].str.strip()
+    df1.loc[:, 'City'] = df1.loc[:, 'City'].str.strip()
+    df1.loc[:, 'Festival'] = df1.loc[:, 'Festival'].str.strip()
+
+    # 6. Limpeza sobre a coluna Time_taken(min)
+    df1['Time_taken(min)'] = df1['Time_taken(min)'].apply( lambda x: x.split( '(min) ' )[1])
+    df1['Time_taken(min)'] = df1['Time_taken(min)'].astype( int )
+    
+    return df1
 
 #----------------------------------------------------------------------------------#
-# 1. Conversão a coluna Age de texto para número
-linhas_selecionadas = (df1 ['Delivery_person_Age'] != 'NaN ')
-df1 = df1.loc[linhas_selecionadas, :].copy()
-df1['Delivery_person_Age'] = df1['Delivery_person_Age']. astype( int )
-df1.shape
-
-linhas_selecionadas = (df1 ['Road_traffic_density'] != 'NaN ')
-df1 = df1.loc[linhas_selecionadas, :].copy()
-
-linhas_selecionadas = (df1 ['City'] != 'NaN ')
-df1 = df1.loc[linhas_selecionadas, :].copy()
-
-linhas_selecionadas = (df1 ['Festival'] != 'NaN ')
-df1 = df1.loc[linhas_selecionadas, :].copy()
-
-
-# 2. Conversão a coluna de Ratings de texto para número decimal (float)
-df1['Delivery_person_Ratings'] = df1['Delivery_person_Ratings']. astype( float )
-
-# 3. Conversão da coluna order_date de texto para data
-df1['Order_Date'] = pd.to_datetime( df1['Order_Date'], format='%d-%m-%Y' )
-
-# 4. Conversão de Multiple_deliveries para Interiro
-linhas_selecionadas = (df1 ['multiple_deliveries'] != 'NaN ')
-df1 = df1.loc[linhas_selecionadas, :].copy()
-df1['multiple_deliveries'] = df1['multiple_deliveries'].astype( int )
-
-# 5. Removendo os espaços dentro de strings/texto/objects
-df1.loc[:, 'ID'] = df1.loc[:, 'ID'].str.strip()
-df1.loc[:, 'Road_traffic_density'] = df1.loc[:, 'Road_traffic_density'].str.strip()
-df1.loc[:, 'Type_of_order'] = df1.loc[:, 'Type_of_order'].str.strip()
-df1.loc[:, 'Type_of_vehicle'] = df1.loc[:, 'Type_of_vehicle'].str.strip()
-df1.loc[:, 'City'] = df1.loc[:, 'City'].str.strip()
-df1.loc[:, 'Festival'] = df1.loc[:, 'Festival'].str.strip()
-
-# 6. Limpeza sobre a coluna Time_taken(min)
-df1['Time_taken(min)'] = df1['Time_taken(min)'].apply( lambda x: x.split( '(min) ' )[1])
-df1['Time_taken(min)'] = df1['Time_taken(min)'].astype( int )
+# Aplicar limpeza dos dados
+#----------------------------------------------------------------------------------#
+df1 = clean_code(df1)
 #----------------------------------------------------------------------------------#
 
 #----------------------------------------------------------------------------------#
@@ -127,6 +125,14 @@ traffic_options = st.sidebar.multiselect(
     default=["Low", "Medium", "High", "Jam"])
 st.sidebar.markdown("""___""")
 st.sidebar.markdown("## Powered by Comunidade DS")
+
+# Filtro de data
+linhas_selecionadas = df1['Order_Date'] < data_limite
+df1 = df1.loc[linhas_selecionadas, :]
+
+# Filtro de tráfego
+linhas_selecionadas = df1['Road_traffic_density'].isin(traffic_options)
+df1 = df1.loc[linhas_selecionadas, :]
 
 #----------------------------------------------------------------------------------#
 #Layout no Streamlit 
@@ -212,6 +218,83 @@ with tab1:
             st.subheader("Top Entregadores mais Lentos")
             df3 = top_delivers(df1, top_asc=False)
             st.dataframe(df3)
+
+with tab2:
+    with st.container():
+        st.title("Visão Tática")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("Distribuição de Entregadores por Cidade")
+            df_city_count = df1['City'].value_counts().reset_index()
+            df_city_count.columns = ['City', 'Count']
+            st.bar_chart(df_city_count.set_index('City'))
+            
+        with col2:
+            st.subheader("Distribuição por Tipo de Veículo")
+            df_vehicle_count = df1['Type_of_vehicle'].value_counts().reset_index()
+            df_vehicle_count.columns = ['Vehicle_Type', 'Count']
+            st.bar_chart(df_vehicle_count.set_index('Vehicle_Type'))
+    
+    with st.container():
+        st.markdown("""___""")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("Avaliações por Idade dos Entregadores")
+            # Criar faixas etárias
+            df1['Age_Group'] = pd.cut(df1['Delivery_person_Age'], 
+                                    bins=[0, 25, 35, 45, 100], 
+                                    labels=['18-25', '26-35', '36-45', '46+'])
+            df_age_ratings = df1.groupby('Age_Group', observed=False)['Delivery_person_Ratings'].mean().reset_index()
+            st.bar_chart(df_age_ratings.set_index('Age_Group'))
+            
+        with col2:
+            st.subheader("Condição dos Veículos por Tipo")
+            df_vehicle_condition = df1.groupby('Type_of_vehicle')['Vehicle_condition'].mean().reset_index()
+            st.bar_chart(df_vehicle_condition.set_index('Type_of_vehicle'))
+
+with tab3:
+    with st.container():
+        st.title("Visão Geográfica")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("Densidade de Entregadores por Cidade")
+            df_city_density = df1.groupby('City').agg({
+                'Delivery_person_ID': 'nunique',
+                'Delivery_person_Ratings': 'mean'
+            }).reset_index()
+            df_city_density.columns = ['City', 'Unique_Deliverers', 'Avg_Rating']
+            st.dataframe(df_city_density)
+            
+        with col2:
+            st.subheader("Performance por Condições de Trânsito")
+            df_traffic_performance = df1.groupby('Road_traffic_density').agg({
+                'Time_taken(min)': 'mean',
+                'Delivery_person_Ratings': 'mean'
+            }).reset_index()
+            df_traffic_performance.columns = ['Traffic_Density', 'Avg_Time', 'Avg_Rating']
+            st.dataframe(df_traffic_performance)
+    
+    with st.container():
+        st.markdown("""___""")
+        st.subheader("Análise Geográfica Detalhada")
+        
+        # Tabela com informações geográficas consolidadas
+        df_geo_analysis = df1.groupby(['City', 'Road_traffic_density']).agg({
+            'Delivery_person_ID': 'nunique',
+            'Time_taken(min)': ['mean', 'std'],
+            'Delivery_person_Ratings': 'mean'
+        }).round(2)
+        
+        # Flatten column names
+        df_geo_analysis.columns = ['Unique_Deliverers', 'Avg_Time', 'Std_Time', 'Avg_Rating']
+        df_geo_analysis = df_geo_analysis.reset_index()
+        
+        st.dataframe(df_geo_analysis)
 
 
 
